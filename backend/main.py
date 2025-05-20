@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from nba_api.stats.endpoints import playergamelog
 from nba_api.stats.static import players
 import pandas as pd
-from nba_api.stats.library.parameters import Timeout
 from requests.exceptions import ReadTimeout
 
 app = FastAPI()
@@ -29,9 +28,6 @@ def read_root():
 @app.get("/favicon.ico")
 def favicon():
     return {"message": "No favicon available"}
-
-# Set a custom timeout (e.g., 60 seconds)
-Timeout.timeout = 60
 
 @app.post("/predict")
 def predict_prop(req: PropRequest):
