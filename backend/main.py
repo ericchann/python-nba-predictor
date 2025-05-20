@@ -21,6 +21,18 @@ class PropRequest(BaseModel):
     player_name: str
     stat: str  # e.g., "points"
 
+STAT_MAPPING = {
+    "points": "PTS",
+    "rebounds": "REB",
+    "assists": "AST",
+    "steals": "STL",
+    "blocks": "BLK",
+    "turnovers": "TOV",
+    "fouls": "PF",
+    "plus_minus": "PLUS_MINUS",
+    # Add more mappings as needed
+}
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the NBA Predictor API!"}
@@ -32,13 +44,29 @@ def favicon():
 @app.post("/predict")
 def predict_prop(req: PropRequest):
     try:
-        player = players.find_players_by_full_name(req.player_name)[0]
+        player_list = players.find_players_by_full_name(req.player_name)
+        if not player_list:
+            return {"error": "Player not found. Please check the player name and try again."}
+        
+        player = player_list[0]
         gamelog = playergamelog.PlayerGameLog(player_id=player['id'], season='2024-25')
         df = gamelog.get_data_frames()[0]
+        
+        # Debug: Print the DataFrame columns
+        print("Available columns in DataFrame:", df.columns)
+
+        # Map the user-friendly stat name to the actual column name
+        stat_column = STAT_MAPPING.get(req.stat.lower())
+        if not stat_column:
+            return {"error": f"Stat '{req.stat}' is not valid. Available stats: {list(STAT_MAPPING.keys())}"}
+
+        if stat_column not in df.columns:
+            return {"error": f"Stat '{req.stat}' not found in the data. Available stats: {list(df.columns)}"}
+        
         df = df.sort_values("GAME_DATE").tail(10)
-        avg = df[req.stat.upper()].mean()
+        avg = df[stat_column].mean()
         return {"prediction": round(avg, 1)}
     except ReadTimeout:
         return {"error": "The request to stats.nba.com timed out. Please try again later."}
-    except IndexError:
-        return {"error": "Player not found. Please check the player name and try again."}
+    except Exception as e:
+        return {"error": f"An unexpected error occurred: {str(e)}"}
