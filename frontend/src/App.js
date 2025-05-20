@@ -1,32 +1,71 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
+import TodayPredictions from "./TodayPredictions";
+
+const NBAPropPredictor = () => {
+    const [playerName, setPlayerName] = useState("");
+    const [stat, setStat] = useState("");
+    const [prediction, setPrediction] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const backendUrl = "http://127.0.0.1:8000";
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        setPrediction(null);
+
+        try {
+            const response = await axios.post(`${backendUrl}/predict`, {
+                player_name: playerName,
+                stat: stat,
+            });
+            if (response.data.error) {
+                setError(response.data.error);
+            } else {
+                setPrediction(response.data.prediction);
+            }
+        } catch (err) {
+            setError("Failed to fetch prediction. Please try again later.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div>
+            <h1>NBA Prop Predictor</h1>
+            <form onSubmit={handleSubmit}>
+                <input
+                    type="text"
+                    placeholder="Player Name"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                />
+                <input
+                    type="text"
+                    placeholder="Stat (e.g., points)"
+                    value={stat}
+                    onChange={(e) => setStat(e.target.value)}
+                />
+                <button type="submit">Predict</button>
+            </form>
+            {loading && <p>Loading...</p>}
+            {error && <p style={{ color: "red" }}>{error}</p>}
+            {prediction !== null && <p>Predicted {stat}: {prediction}</p>}
+        </div>
+    );
+};
 
 function App() {
-  const [player, setPlayer] = useState("Julius Randle");
-  const [stat, setStat] = useState("points");
-  const [prediction, setPrediction] = useState(null);
-
-  const getPrediction = async () => {
-    const res = await axios.post("https://python-nba-predictor.onrender.com/", {
-      player_name: player,
-      stat: stat
-    });
-    setPrediction(res.data.prediction);
-  };
-
-  return (
-    <div style={{ padding: "2rem" }}>
-      <h1>NBA Prop Predictor</h1>
-      <input value={player} onChange={(e) => setPlayer(e.target.value)} />
-      <select value={stat} onChange={(e) => setStat(e.target.value)}>
-        <option value="points">Points</option>
-        <option value="reb">Rebounds</option>
-        <option value="ast">Assists</option>
-      </select>
-      <button onClick={getPrediction}>Predict</button>
-      {prediction !== null && <p>Predicted {stat}: {prediction}</p>}
-    </div>
-  );
+    return (
+        <div>
+            <NBAPropPredictor />
+            <TodayPredictions />
+        </div>
+    );
 }
 
 export default App;
