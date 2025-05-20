@@ -7,7 +7,7 @@ function App() {
   const [prediction, setPrediction] = useState(null);
 
   const getPrediction = async () => {
-    const res = await axios.post("http://localhost:8000/predict", {
+    const res = await axios.post("https://python-nba-predictor.onrender.com/", {
       player_name: player,
       stat: stat
     });
