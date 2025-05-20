@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from nba_api.stats.endpoints import playergamelog
 from nba_api.stats.static import players
 import pandas as pd
+from nba_api.stats.library.parameters import Timeout
+from requests.exceptions import ReadTimeout
 
 app = FastAPI()
 
@@ -28,11 +30,19 @@ def read_root():
 def favicon():
     return {"message": "No favicon available"}
 
+# Set a custom timeout (e.g., 60 seconds)
+Timeout.timeout = 60
+
 @app.post("/predict")
 def predict_prop(req: PropRequest):
-    player = players.find_players_by_full_name(req.player_name)[0]
-    gamelog = playergamelog.PlayerGameLog(player_id=player['id'], season='2024-25')
-    df = gamelog.get_data_frames()[0]
-    df = df.sort_values("GAME_DATE").tail(10)
-    avg = df[req.stat.upper()].mean()
-    return {"prediction": round(avg, 1)}
+    try:
+        player = players.find_players_by_full_name(req.player_name)[0]
+        gamelog = playergamelog.PlayerGameLog(player_id=player['id'], season='2024-25')
+        df = gamelog.get_data_frames()[0]
+        df = df.sort_values("GAME_DATE").tail(10)
+        avg = df[req.stat.upper()].mean()
+        return {"prediction": round(avg, 1)}
+    except ReadTimeout:
+        return {"error": "The request to stats.nba.com timed out. Please try again later."}
+    except IndexError:
+        return {"error": "Player not found. Please check the player name and try again."}
